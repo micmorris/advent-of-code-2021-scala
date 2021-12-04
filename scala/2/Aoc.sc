@@ -3,11 +3,28 @@ import mainargs.main
 
 import java.io.{BufferedReader, InputStreamReader}
 
+val USAGE =
+  """Usages:
+    |  amm Aoc.sc p1 sample
+    |  amm Aoc.sc p2 input
+    |  amm Aoc.sc test
+    |""".stripMargin
+
 @main
-def main(part: Int, filename: String): Int = {
-  part match {
-    case 1 => Aoc.run1v2(Setup.readInput(filename))
-    case 2 => Aoc.run2(Setup.readInput(filename))
+def main(part: String, maybeFilename: Option[String]): Int = {
+  (part, maybeFilename) match {
+    case ("test", _) =>
+      Test.runAllTests
+    case ("p1", Some(filename)) =>
+      Aoc.run1(Setup.readInput(filename))
+    case ("p1v2", Some(filename)) =>
+      Aoc.run1v2(Setup.readInput(filename))
+    case ("p2", Some(filename)) =>
+      Aoc.run2(Setup.readInput(filename))
+    case _ =>
+      println("Invalid input given.")
+      println(USAGE)
+      0
   }
 }
 
@@ -56,6 +73,18 @@ object Aoc {
     x * y
   }
 
+}
+
+object Test {
+
+  def runAllTests: Int = {
+    testThing
+    0
+  }
+
+  private def testThing: Unit = {
+    assert(true)
+  }
 }
 
 object Setup {

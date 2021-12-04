@@ -6,9 +6,9 @@ import scala.annotation.tailrec
 
 val USAGE =
   """Usages:
-    |  amm Aoc.scala p1 sample
-    |  amm Aoc.scala p2 input
-    |  amm Aoc.scala test
+    |  amm Aoc.sc p1 sample
+    |  amm Aoc.sc p2 input
+    |  amm Aoc.sc test
     |""".stripMargin
 
 @main
