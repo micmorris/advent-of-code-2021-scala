@@ -45,7 +45,7 @@ object Aoc {
 
   def markCards(cards: List[BingoCard], draw: Int): List[BingoCard] = {
     cards.map(card =>
-      if (matrixTraversal.exist(_.contains((draw, false)))(card.rows) ) {
+      if (matrixTraversal.exist(_.contains((draw, false)))(card.rows)) {
         BingoCard(
           updateMatrixMatch(draw)(card.rows)
         )
@@ -58,13 +58,24 @@ object Aoc {
   def findWinner(cards: List[BingoCard])(
       implicit lastDraw: Int
   ): Option[Int] = {
-    ???
+    cards
+      .find(card =>
+        card.rows.exists(_.forall(_._2)) ||
+          card.columns.exists(_.forall(_._2))
+      )
+      .map(calculateScore)
   }
 
   def calculateScore(card: BingoCard)(
       implicit lastDraw: Int
   ): Int = {
-    ???
+    card.rows
+      .map(
+        _.filterNot(_._2)
+          .map(_._1)
+          .sum
+      )
+      .sum * lastDraw
   }
 
   def run2(input: BingoGame): Int = {
@@ -89,6 +100,7 @@ object Bingo {
   }
 
   private val listTraversal = Traversal.fromTraverse[List, (Int, Boolean)]
+
   private val updateListMatch = (n: Int) =>
     listTraversal.modify {
       case (i, false) if i == n => (i, true)
@@ -127,13 +139,13 @@ object Setup {
       .toList match {
       case draws :: cards =>
         BingoGame(
-          draws = draws.map(_.toInt).toList,
+          draws = draws.split(",").map(_.toInt).toList,
           cards = cards
             .grouped(DIMENSIONALITY)
             .map(rows =>
               BingoCard(
                 rows = rows.map(
-                  _.split(" ")
+                  _.split("\\s+")
                     .map(_.toInt)
                     .map((_, false))
                     .toList
