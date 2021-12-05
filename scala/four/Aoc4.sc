@@ -2,6 +2,8 @@ import ammonite.ops._
 import cats.implicits._
 import mainargs.main
 import monocle.Traversal
+import shapeless.tag
+import shapeless.tag.@@
 
 import java.io.{BufferedReader, InputStreamReader}
 import scala.annotation.tailrec
@@ -25,25 +27,29 @@ object Aoc {
 
   import Bingo._
 
-  def run1(input: BingoGame): Int = {
-    playGame(input.draws, input.cards)(-1)
+  def run1(input: BingoGame): Int @@ Score = {
+    playGame(input.draws, input.cards)(tag[Draw](-1))._2
+  }
+
+  def run2(input: BingoGame): Int = {
+    ???
   }
 
   @tailrec
-  def playGame(draws: List[Int], cards: List[BingoCard])(
-      implicit lastDraw: Int
-  ): Int = {
+  def playGame(draws: List[Int @@ Draw], cards: List[BingoCard])(
+      implicit lastDraw: Int @@ Draw
+  ): (Int @@ WinnerIndex, Int @@ Score, List[BingoCard]) = {
     (draws, findWinner(cards)) match {
-      case (_, Some(score)) =>
-        score
+      case (_, Some((score, index))) =>
+        (index, score, cards)
       case (Nil, _) =>
-        -1
+        ???
       case (draw :: remainingDraws, _) =>
         playGame(remainingDraws, markCards(cards, draw))(draw)
     }
   }
 
-  def markCards(cards: List[BingoCard], draw: Int): List[BingoCard] = {
+  def markCards(cards: List[BingoCard], draw: Int @@ Draw): List[BingoCard] = {
     cards.map(card =>
       if (matrixTraversal.exist(_.contains((draw, false)))(card.rows)) {
         BingoCard(
@@ -56,30 +62,35 @@ object Aoc {
   }
 
   def findWinner(cards: List[BingoCard])(
-      implicit lastDraw: Int
-  ): Option[Int] = {
-    cards
-      .find(card =>
-        card.rows.exists(_.forall(_._2)) ||
-          card.columns.exists(_.forall(_._2))
-      )
-      .map(calculateScore)
+      implicit lastDraw: Int @@ Draw
+  ): Option[(Int @@ Score, Int @@ WinnerIndex)] = {
+    Option(
+      cards
+        .indexWhere(card =>
+          card.rows.exists(_.forall(_._2)) ||
+            card.columns.exists(_.forall(_._2))
+        )
+    )
+      .filter(_ >= 0)
+      .map(tag[WinnerIndex](_))
+      .map(winningIndex => {
+        val winningCard = cards(winningIndex)
+        (tag[Score](calculateScore(winningCard)), winningIndex)
+      })
   }
 
   def calculateScore(card: BingoCard)(
-      implicit lastDraw: Int
-  ): Int = {
-    card.rows
-      .map(
-        _.filterNot(_._2)
-          .map(_._1)
-          .sum
-      )
-      .sum * lastDraw
-  }
-
-  def run2(input: BingoGame): Int = {
-    ???
+      implicit lastDraw: Int @@ Draw
+  ): Int @@ Score = {
+    tag[Score](
+      card.rows
+        .map(
+          _.filterNot(_._2)
+            .map(_._1)
+            .sum
+        )
+        .sum * lastDraw
+    )
   }
 
 }
@@ -88,9 +99,13 @@ object Bingo {
 
   val DIMENSIONALITY = 5
 
+  trait Draw
+  trait Score
+  trait WinnerIndex
+
   case class BingoGame(
       cards: List[BingoCard],
-      draws: List[Int]
+      draws: List[Int @@ Draw]
   )
 
   case class BingoCard(
@@ -139,7 +154,11 @@ object Setup {
       .toList match {
       case draws :: cards =>
         BingoGame(
-          draws = draws.split(",").map(_.toInt).toList,
+          draws = draws
+            .split(",")
+            .map(_.toInt)
+            .map(tag[Draw](_))
+            .toList,
           cards = cards
             .grouped(DIMENSIONALITY)
             .map(rows =>
