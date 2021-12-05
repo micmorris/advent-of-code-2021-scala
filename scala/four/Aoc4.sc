@@ -1,15 +1,10 @@
 import ammonite.ops._
+import cats.implicits._
 import mainargs.main
+import monocle.Traversal
 
 import java.io.{BufferedReader, InputStreamReader}
 import scala.annotation.tailrec
-
-val USAGE =
-  """Usages:
-    |  amm Aoc.sc p1 sample
-    |  amm Aoc.sc p2 input
-    |  amm Aoc.sc test
-    |""".stripMargin
 
 @main
 def main(part: String, maybeFilename: Option[String]): Int = {
@@ -22,8 +17,7 @@ def main(part: String, maybeFilename: Option[String]): Int = {
       Aoc.run2(Setup.readInput(filename))
     case _ =>
       println("Invalid input given.")
-      println(USAGE)
-      0
+      -1
   }
 }
 
@@ -31,13 +25,12 @@ object Aoc {
 
   import Bingo._
 
-  //Input Outcome:
   def run1(input: BingoGame): Int = {
     playGame(input.draws, input.cards)(-1)
   }
 
   @tailrec
-  def playGame(draws: Seq[Int], cards: Seq[BingoCard])(
+  def playGame(draws: List[Int], cards: List[BingoCard])(
       implicit lastDraw: Int
   ): Int = {
     (draws, findWinner(cards)) match {
@@ -50,23 +43,41 @@ object Aoc {
     }
   }
 
-  def markCards(cards: Seq[BingoCard], draw: Int): Seq[BingoCard] = {
-    ???
+  def markCards(cards: List[BingoCard], draw: Int): List[BingoCard] = {
+    cards.map(card =>
+      if (matrixTraversal.exist(_.contains((draw, false)))(card.rows)) {
+        BingoCard(
+          updateMatrixMatch(draw)(card.rows)
+        )
+      } else {
+        card
+      }
+    )
   }
 
-  def findWinner(cards: Seq[BingoCard])(
+  def findWinner(cards: List[BingoCard])(
       implicit lastDraw: Int
   ): Option[Int] = {
-    ???
+    cards
+      .find(card =>
+        card.rows.exists(_.forall(_._2)) ||
+          card.columns.exists(_.forall(_._2))
+      )
+      .map(calculateScore)
   }
 
   def calculateScore(card: BingoCard)(
       implicit lastDraw: Int
   ): Int = {
-    ???
+    card.rows
+      .map(
+        _.filterNot(_._2)
+          .map(_._1)
+          .sum
+      )
+      .sum * lastDraw
   }
 
-  //Input Outcome:
   def run2(input: BingoGame): Int = {
     ???
   }
@@ -75,14 +86,29 @@ object Aoc {
 
 object Bingo {
 
+  val DIMENSIONALITY = 5
+
   case class BingoGame(
-      cards: Seq[BingoCard],
-      draws: Seq[Int]
+      cards: List[BingoCard],
+      draws: List[Int]
   )
 
   case class BingoCard(
-      rows: Seq[Seq[(Int, Boolean)]]
-  )
+      rows: List[List[(Int, Boolean)]]
+  ) {
+    lazy val columns = rows.transpose
+  }
+
+  private val listTraversal = Traversal.fromTraverse[List, (Int, Boolean)]
+
+  private val updateListMatch = (n: Int) =>
+    listTraversal.modify {
+      case (i, false) if i == n => (i, true)
+      case (i, bool)            => (i, bool)
+    }
+
+  val matrixTraversal = Traversal.fromTraverse[List, List[(Int, Boolean)]]
+  val updateMatrixMatch = (n: Int) => matrixTraversal.modify(updateListMatch(n)(_))
 }
 
 object Test {
@@ -102,7 +128,9 @@ object Setup {
   import Bingo._
 
   def readInput(filename: String): BingoGame = {
-    val fileReader = new BufferedReader(new InputStreamReader(read.inputStream ! pwd / RelPath(filename)))
+    val fileReader = new BufferedReader(
+      new InputStreamReader(read.inputStream ! pwd / RelPath(filename))
+    )
     Stream
       .continually(fileReader.readLine())
       .takeWhile(_ != null)
@@ -111,20 +139,20 @@ object Setup {
       .toList match {
       case draws :: cards =>
         BingoGame(
-          draws = draws.map(_.toInt),
+          draws = draws.split(",").map(_.toInt).toList,
           cards = cards
-            .grouped(5)
-            .toSeq
+            .grouped(DIMENSIONALITY)
             .map(rows =>
               BingoCard(
                 rows = rows.map(
-                  _.split(" ")
+                  _.split("\\s+")
                     .map(_.toInt)
                     .map((_, false))
-                    .toSeq
+                    .toList
                 )
               )
             )
+            .toList
         )
     }
 
