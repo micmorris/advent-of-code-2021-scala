@@ -31,25 +31,44 @@ object Aoc {
     playGame(input.draws, input.cards)(tag[Draw](-1))._2
   }
 
-  def run2(input: BingoGame): Int = {
-    ???
+  def run2(input: BingoGame): Int @@ Score = {
+    playGameUntilLoser(input.draws, input.cards)(tag[Draw](-1))
   }
 
   @tailrec
-  def playGame(draws: List[Int @@ Draw], cards: List[BingoCard])(
+  def playGameUntilLoser(
+      draws: List[Int @@ Draw],
+      cards: List[BingoCard]
+  )(
       implicit lastDraw: Int @@ Draw
-  ): (Int @@ WinnerIndex, Int @@ Score, List[BingoCard]) = {
-    (draws, findWinner(cards)) match {
-      case (_, Some((score, index))) =>
-        (index, score, cards)
-      case (Nil, _) =>
-        ???
-      case (draw :: remainingDraws, _) =>
+  ): Int @@ Score = {
+    playGame(draws, cards) match {
+      case (_, score, _, _, remainingCards) if remainingCards.length == 1 =>
+        score
+      case (index, _, lastDraw, remainingDraws, remainingCards) =>
+        playGameUntilLoser(remainingDraws, remainingCards.patch(index, Nil, 1))(lastDraw)
+    }
+  }
+
+  @tailrec
+  def playGame(
+      draws: List[Int @@ Draw],
+      cards: List[BingoCard]
+  )(
+      implicit lastDraw: Int @@ Draw
+  ): (Int @@ WinnerIndex, Int @@ Score, Int @@ Draw, List[Int @@ Draw], List[BingoCard]) = {
+    (cards, draws, findWinner(cards)) match {
+      case (_, draw :: remainingDraws, Some((score, index))) =>
+        (index, score, draw, remainingDraws, cards)
+      case (_, draw :: remainingDraws, _) =>
         playGame(remainingDraws, markCards(cards, draw))(draw)
     }
   }
 
-  def markCards(cards: List[BingoCard], draw: Int @@ Draw): List[BingoCard] = {
+  def markCards(
+      cards: List[BingoCard],
+      draw: Int @@ Draw
+  ): List[BingoCard] = {
     cards.map(card =>
       if (matrixTraversal.exist(_.contains((draw, false)))(card.rows)) {
         BingoCard(
