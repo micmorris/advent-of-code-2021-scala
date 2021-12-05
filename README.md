@@ -13,7 +13,6 @@ https://adventofcode.com/2021
 ## Quickstart
 
 ```bash
-cd scala/1
-# amm Aoc.sc <part-of-question> <input-filename>
-amm Aoc.sc p1 sample
+# amm-sbt scala/Aoc.sc <day> [p1 | p2 | test] [sample | input]
+amm-sbt scala/Aoc.sc 1 p1 sample
 ```

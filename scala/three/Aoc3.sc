@@ -4,13 +4,6 @@ import mainargs.main
 import java.io.{BufferedReader, InputStreamReader}
 import scala.annotation.tailrec
 
-val USAGE =
-  """Usages:
-    |  amm Aoc.sc p1 sample
-    |  amm Aoc.sc p2 input
-    |  amm Aoc.sc test
-    |""".stripMargin
-
 @main
 def main(part: String, maybeFilename: Option[String]): Int = {
   (part, maybeFilename) match {
@@ -22,14 +15,12 @@ def main(part: String, maybeFilename: Option[String]): Int = {
       Aoc.run2(Setup.readInput(filename))
     case _ =>
       println("Invalid input given.")
-      println(USAGE)
-      0
+      -1
   }
 }
 
 object Aoc {
 
-  //1092896
   def run1(input: Stream[String]): Int = {
     val lines = input.toList
       .map(
@@ -52,7 +43,6 @@ object Aoc {
     }
   }
 
-  //4672151
   def run2(input: Stream[String]): Int = {
     val lines = input.toList
       .map(

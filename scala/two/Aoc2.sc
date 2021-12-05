@@ -3,13 +3,6 @@ import mainargs.main
 
 import java.io.{BufferedReader, InputStreamReader}
 
-val USAGE =
-  """Usages:
-    |  amm Aoc.sc p1 sample
-    |  amm Aoc.sc p2 input
-    |  amm Aoc.sc test
-    |""".stripMargin
-
 @main
 def main(part: String, maybeFilename: Option[String]): Int = {
   (part, maybeFilename) match {
@@ -23,8 +16,7 @@ def main(part: String, maybeFilename: Option[String]): Int = {
       Aoc.run2(Setup.readInput(filename))
     case _ =>
       println("Invalid input given.")
-      println(USAGE)
-      0
+      -1
   }
 }
 
