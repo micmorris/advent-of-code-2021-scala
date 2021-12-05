@@ -1,7 +1,7 @@
 import ammonite.ops._
 import cats.implicits._
 import mainargs.main
-import monocle.{Lens, Traversal}
+import monocle.Traversal
 
 import java.io.{BufferedReader, InputStreamReader}
 import scala.annotation.tailrec
@@ -45,13 +45,14 @@ object Aoc {
 
   def markCards(cards: List[BingoCard], draw: Int): List[BingoCard] = {
     cards.map(card =>
-      if (card.rows.exists(_.contains((draw, false)))) {
-        card.rows
+      if (matrixTraversal.exist(_.contains((draw, false)))(card.rows) ) {
+        BingoCard(
+          updateMatrixMatch(draw)(card.rows)
+        )
       } else {
         card
       }
     )
-    ???
   }
 
   def findWinner(cards: List[BingoCard])(
@@ -88,23 +89,14 @@ object Bingo {
   }
 
   private val listTraversal = Traversal.fromTraverse[List, (Int, Boolean)]
-
   private val updateListMatch = (n: Int) =>
     listTraversal.modify {
       case (i, false) if i == n => (i, true)
       case (i, bool)            => (i, bool)
     }
 
-  private val matrixTraversal = Traversal.fromTraverse[List, List[(Int, Boolean)]]
+  val matrixTraversal = Traversal.fromTraverse[List, List[(Int, Boolean)]]
   val updateMatrixMatch = (n: Int) => matrixTraversal.modify(updateListMatch(n)(_))
-
-  val bingoCardLens = Lens[BingoCard, List[List[(Int, Boolean)]]](_.rows)(n =>
-    card =>
-      BingoCard(
-        ???
-//        updateMatrixMatch(n)(card.rows)
-      )
-  )
 }
 
 object Test {
