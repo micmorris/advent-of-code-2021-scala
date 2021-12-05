@@ -2,6 +2,8 @@ import ammonite.ops._
 import cats.implicits._
 import mainargs.main
 import monocle.Traversal
+import shapeless.tag
+import shapeless.tag.@@
 
 import java.io.{BufferedReader, InputStreamReader}
 import scala.annotation.tailrec
@@ -25,25 +27,54 @@ object Aoc {
 
   import Bingo._
 
-  def run1(input: BingoGame): Int = {
-    playGame(input.draws, input.cards)(-1)
+  def run1(input: BingoGame): Int @@ Score = {
+    playGame(input.draws, input.cards)(tag[Draw](-1))._2
+  }
+
+  def run2(input: BingoGame): Int @@ Score = {
+    playGameUntilLoser(input.draws, input.cards)(tag[Draw](-1))
   }
 
   @tailrec
-  def playGame(draws: List[Int], cards: List[BingoCard])(
-      implicit lastDraw: Int
-  ): Int = {
-    (draws, findWinner(cards)) match {
-      case (_, Some(score)) =>
+  def playGameUntilLoser(
+      draws: List[Int @@ Draw],
+      cards: List[BingoCard]
+  )(
+      implicit lastDraw: Int @@ Draw
+  ): Int @@ Score = {
+    playGame(draws, cards) match {
+      case (index, score, lastDraw, remainingDraws, remainingCards) if remainingCards.length == 1 =>
+//        println(s"\n\n\nFINAL Winner! Index=$index Score=$score lastDraw=$lastDraw")
+//        println(s"    remainingDraws=$remainingDraws")
+//        println(s"    remainingCards=$remainingCards")
         score
-      case (Nil, _) =>
-        -1
-      case (draw :: remainingDraws, _) =>
+      case (index, score, lastDraw, remainingDraws, remainingCards) =>
+//        println(s"\nWinner! Index=$index Score=$score lastDraw=$lastDraw")
+//        println(s"    remainingDraws=$remainingDraws")
+//        println(s"    remainingCards=$remainingCards")
+        playGameUntilLoser(remainingDraws, remainingCards.patch(index, Nil, 1))(lastDraw)
+    }
+  }
+
+  @tailrec
+  def playGame(
+      draws: List[Int @@ Draw],
+      newCards: List[BingoCard]
+  )(
+      implicit lastDraw: Int @@ Draw
+  ): (Int @@ WinnerIndex, Int @@ Score, Int @@ Draw, List[Int @@ Draw], List[BingoCard]) = {
+    (newCards, draws, findWinner(newCards)) match {
+      case (cards, remainingDraws, Some((score, index))) =>
+        (index, score, lastDraw, remainingDraws, cards)
+      case (cards, draw :: remainingDraws, _) =>
         playGame(remainingDraws, markCards(cards, draw))(draw)
     }
   }
 
-  def markCards(cards: List[BingoCard], draw: Int): List[BingoCard] = {
+  def markCards(
+      cards: List[BingoCard],
+      draw: Int @@ Draw
+  ): List[BingoCard] = {
     cards.map(card =>
       if (matrixTraversal.exist(_.contains((draw, false)))(card.rows)) {
         BingoCard(
@@ -56,30 +87,35 @@ object Aoc {
   }
 
   def findWinner(cards: List[BingoCard])(
-      implicit lastDraw: Int
-  ): Option[Int] = {
-    cards
-      .find(card =>
-        card.rows.exists(_.forall(_._2)) ||
-          card.columns.exists(_.forall(_._2))
-      )
-      .map(calculateScore)
+      implicit lastDraw: Int @@ Draw
+  ): Option[(Int @@ Score, Int @@ WinnerIndex)] = {
+    Option(
+      cards
+        .indexWhere(card =>
+          card.rows.exists(_.forall(_._2)) ||
+            card.columns.exists(_.forall(_._2))
+        )
+    )
+      .filter(_ >= 0)
+      .map(tag[WinnerIndex](_))
+      .map(winningIndex => {
+        val winningCard = cards(winningIndex)
+        (tag[Score](calculateScore(winningCard)), winningIndex)
+      })
   }
 
   def calculateScore(card: BingoCard)(
-      implicit lastDraw: Int
-  ): Int = {
-    card.rows
-      .map(
-        _.filterNot(_._2)
-          .map(_._1)
-          .sum
-      )
-      .sum * lastDraw
-  }
-
-  def run2(input: BingoGame): Int = {
-    ???
+      implicit lastDraw: Int @@ Draw
+  ): Int @@ Score = {
+    tag[Score](
+      card.rows
+        .map(
+          _.filterNot(_._2)
+            .map(_._1)
+            .sum
+        )
+        .sum * lastDraw
+    )
   }
 
 }
@@ -88,9 +124,13 @@ object Bingo {
 
   val DIMENSIONALITY = 5
 
+  trait Draw
+  trait Score
+  trait WinnerIndex
+
   case class BingoGame(
       cards: List[BingoCard],
-      draws: List[Int]
+      draws: List[Int @@ Draw]
   )
 
   case class BingoCard(
@@ -139,7 +179,11 @@ object Setup {
       .toList match {
       case draws :: cards =>
         BingoGame(
-          draws = draws.split(",").map(_.toInt).toList,
+          draws = draws
+            .split(",")
+            .map(_.toInt)
+            .map(tag[Draw](_))
+            .toList,
           cards = cards
             .grouped(DIMENSIONALITY)
             .map(rows =>
