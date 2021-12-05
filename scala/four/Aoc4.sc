@@ -43,9 +43,15 @@ object Aoc {
       implicit lastDraw: Int @@ Draw
   ): Int @@ Score = {
     playGame(draws, cards) match {
-      case (_, score, _, _, remainingCards) if remainingCards.length == 1 =>
+      case (index, score, lastDraw, remainingDraws, remainingCards) if remainingCards.length == 1 =>
+//        println(s"\n\n\nFINAL Winner! Index=$index Score=$score lastDraw=$lastDraw")
+//        println(s"    remainingDraws=$remainingDraws")
+//        println(s"    remainingCards=$remainingCards")
         score
-      case (index, _, lastDraw, remainingDraws, remainingCards) =>
+      case (index, score, lastDraw, remainingDraws, remainingCards) =>
+//        println(s"\nWinner! Index=$index Score=$score lastDraw=$lastDraw")
+//        println(s"    remainingDraws=$remainingDraws")
+//        println(s"    remainingCards=$remainingCards")
         playGameUntilLoser(remainingDraws, remainingCards.patch(index, Nil, 1))(lastDraw)
     }
   }
@@ -53,14 +59,14 @@ object Aoc {
   @tailrec
   def playGame(
       draws: List[Int @@ Draw],
-      cards: List[BingoCard]
+      newCards: List[BingoCard]
   )(
       implicit lastDraw: Int @@ Draw
   ): (Int @@ WinnerIndex, Int @@ Score, Int @@ Draw, List[Int @@ Draw], List[BingoCard]) = {
-    (cards, draws, findWinner(cards)) match {
-      case (_, draw :: remainingDraws, Some((score, index))) =>
-        (index, score, draw, remainingDraws, cards)
-      case (_, draw :: remainingDraws, _) =>
+    (newCards, draws, findWinner(newCards)) match {
+      case (cards, remainingDraws, Some((score, index))) =>
+        (index, score, lastDraw, remainingDraws, cards)
+      case (cards, draw :: remainingDraws, _) =>
         playGame(remainingDraws, markCards(cards, draw))(draw)
     }
   }
