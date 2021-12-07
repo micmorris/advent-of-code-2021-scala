@@ -4,11 +4,19 @@ Scala implementation of AoC 2021
 
 https://adventofcode.com/2021
 
-## Dependencies
+## Setup
+
+### Dependencies to Install
 
 1. [Scala](https://www.scala-lang.org/download/)
 2. [sbt](https://www.scala-sbt.org/)
 3. [Ammonite](https://ammonite.io/)
+
+### Aliases
+
+```bash
+amm-sbt='sbt Compile/fullClasspath/exportToAmmoniteScript && amm --predef target/scala-2.12/fullClasspath-Compile.sc'
+```
 
 ## Quickstart
 
